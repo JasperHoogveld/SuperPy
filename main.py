@@ -42,14 +42,12 @@ def main():
     group3.add_argument("-now", help="show current inventory|revenue|profit")
     args = parser.parse_args()    
 
-    if args.buy == 'buy':
+    if args.buy:
         csv_writer(buy_csv, args.prod, args.price, args.exp)
         
-    if args.sell == 'sell':
+    if args.sell:
         csv_writer(sell_csv, args.prod, args.price, args.exp)
 
-def what():
-    pass
 
 # def BuySell():
 #     def __init__(self, id, prod_name, price, exp_date):
