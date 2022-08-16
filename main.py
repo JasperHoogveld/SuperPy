@@ -21,7 +21,6 @@ strfdate = today.strftime("%Y-%m-%d")
 strfmonth = today.strftime("%Y-%m")
 
 
-
 def main():
     parser = argparse.ArgumentParser(prog="Inventastic", 
                                     description="Program to edit/check store Inventory",
@@ -49,6 +48,8 @@ def main():
     if args.sell == 'sell':
         csv_writer(sell_csv, args.prod, args.price, args.exp)
 
+def what():
+    pass
 
 # def BuySell():
 #     def __init__(self, id, prod_name, price, exp_date):
