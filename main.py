@@ -61,25 +61,6 @@ def main():
     if args.command == 'date':
         pass
 
-    # group1 = parser.add_mutually_exclusive_group()
-    # group2 = parser.add_mutually_exclusive_group()
-    # group3 = parser.add_mutually_exclusive_group()
-    # group1.add_argument("command", help="requires -prod, -amount, -price and -exp", nargs='?')
-    # #group1.add_argument("buy", help="requires -prod and -exp", nargs='?')
-    # #group1.add_argument("sell", help="requires -prod and -exp", nargs='?')
-    # #group1.add_argument("report", help="print report of revenue or profit", nargs='?')
-    # parser.add_argument("-prod", help="enter a product to buy or sell", type=str, nargs='?')
-    # parser.add_argument("-amount", help="used with buy|sell options", type=int, nargs='?')
-    # parser.add_argument("-price", help="used with buy|sell options", type=int, nargs='?')
-    # parser.add_argument("-exp", help="used with buy|sell options", nargs='?') # , type=date fails ??
-    # group2.add_argument("-inventory", help="show inventory (used with report option)", nargs='?')
-    # group2.add_argument("-revenue", help="report revenue (used with report option)", nargs='?')
-    # group2.add_argument("-profit", help="report profit (used with report option)", nargs='?')
-    # group3.add_argument("-set-date", help="set different date for processing", type=int)
-    # group3.add_argument("-yesterday", help="show yesterday's inventory|revenue|profit")
-    # group3.add_argument("-now", help="show current inventory|revenue|profit")
-    # args = parser.parse_args()
-
 #def Reporting():
 
 def Product():
