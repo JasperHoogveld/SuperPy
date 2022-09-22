@@ -9,6 +9,8 @@ from typing import Optional
 import os.path
 import shutil
 from pathlib import Path
+import pprint
+import traceback
 
 # Do not change these lines.
 __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
@@ -61,9 +63,7 @@ def main():
     if args.command == 'date':
         pass
 
-#def Reporting():
-
-def Product():
+class Product():
     def __init__(self, prod_name, price, exp_date):
         self.name = prod_name
         self.price = price
@@ -77,53 +77,90 @@ def get_inventory(buy_csv, sell_csv):
     with open(buy_csv, 'r', newline='') as open_csv:
         in_file = csv.DictReader(open_csv)
         for row in in_file:
+            row['in_inv'] = row['Amount']
+            exp_date = datetime.strptime(row['Exp_Date'], '%Y-%m-%d')
+            if exp_date > today:
+                row['is_expired'] = 0
+            else:
+                row['is_expired'] = 1
             bought_list.append(row)
+        #pprint.pprint(bought_list)
 
     # Add all rows from sell_csv to a sold_list
     with open(sell_csv, 'r', newline='') as open_csv:
         in_file = csv.DictReader(open_csv)
         for row in in_file:
             sold_list.append(row)
+        #print(sold_list)
+    
+    for key in sold_list:
+        sold_prod = key['Product']
+        sold_amnt = int(key['Amount'])
+        bought_ID = key['Bought_ID']
+        for buy_key in bought_list:
+            a = buy_key['Product']
+            if sold_prod == buy_key['Product'] and bought_ID == buy_key['ID']:
+                in_inv = int(buy_key['in_inv'])
+                if in_inv == 0:
+                    continue
+                elif in_inv > sold_amnt:
+                    buy_key['in_inv'] = in_inv - sold_amnt
+                    break
+                else:
+                    buy_key['in_inv'] = 0
+                    break
+            else:
+                continue
 
+    ## Build in a totals system to counter selling the last stack when sell_amnt is greater ???
+
+    #pprint.pprint(bought_list)
+    return bought_list
+
+def old_inventory_tries():
     # Calculate total sold per item and add to sold_totals dict
-    sold_totals = {}
-    bought_totals = {}
-    total_amnt = 0
-    for item in sold_list:
-        prod = item['Product']
-        amnt = item['Amount']
-        if len(sold_totals) == 0:
-            sold_totals[prod] = int(amnt)
-        elif prod not in sold_totals:
-            sold_totals[prod] = int(amnt)
-        else:
-            total_amnt = int(amnt) + int(sold_totals[prod])
-            sold_totals[prod] = total_amnt
+    # sold_totals = {}
+    # #bought_totals = {}
+    # total_amnt = 0
+    # for item in sold_list:
 
-    # Calculate total bought per item and add to bought_totals dict
-    for item in bought_list:
-        prod = item['Product']
-        amnt = item['Amount']
-        if len(bought_totals) == 0:
-            bought_totals[prod] = int(amnt)
-        elif prod not in bought_totals:
-            bought_totals[prod] = int(amnt)
-        else:
-            total_amnt = int(amnt) + int(bought_totals[prod])
-            bought_totals[prod] = total_amnt   
+
+
+        # prod = item['Product']
+        # amnt = item['Amount']
+        # if len(sold_totals) == 0:
+        #     sold_totals[prod] = int(amnt)
+        # elif prod not in sold_totals:
+        #     sold_totals[prod] = int(amnt)
+        # else:
+        #     total_amnt = int(amnt) + int(sold_totals[prod])
+        #     sold_totals[prod] = total_amnt
+
+    # # Calculate total bought per item and add to bought_totals dict
+    # for item in bought_list:
+    #     prod = item['Product']
+    #     amnt = item['Amount']
+    #     if len(bought_totals) == 0:
+    #         bought_totals[prod] = int(amnt)
+    #     elif prod not in bought_totals:
+    #         bought_totals[prod] = int(amnt)
+    #     else:
+    #         total_amnt = int(amnt) + int(bought_totals[prod])
+    #         bought_totals[prod] = total_amnt   
 
     # Subtract bought_total and sold_total
-    inventory_list = {key: bought_totals[key] - sold_totals.get(key, 0) for key in bought_totals}
-    print(inventory_list)
-    return inventory_list
-
+    # inventory_list = dict()
+    # for key in bought_totals:
+    #     inventory_list[key] = bought_totals[key] - sold_totals.get(key, 0)
+    # #inventory_list = {key: bought_totals[key] - sold_totals.get(key, 0) for key in bought_totals}
+    #return inventory_list
+    pass
 
 # def SetDate():
 #     pass
 
 
 ## CSV Writer to write a product to any csv file
-#inventory_csv = os.path.join(sys.path[0], 'inventory.csv')
 buy_csv = os.path.join(sys.path[0], 'bought.csv')
 sell_csv = os.path.join(sys.path[0], 'sold.csv')
 
@@ -172,54 +209,93 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
         for row in rowreader:
             last_used_ID = row['ID']
 
-    # Check availability
-    ## FIX : If amnt > row['Amount] only the latest oldest_prod_buy_ID is given !!!
-    with open(sell_csv, newline='') as sell_check:
-        rowreader = csv.DictReader(sell_check)
-        total_sold = 0
-        for row in rowreader:
-            if row['Product'] == prod:
-                total_sold = total_sold + int(row['Amount'])
-    with open(buy_csv, newline='') as buy_check:
-        rowreader = csv.DictReader(buy_check)
-        total_bought = 0
-        total_required = total_sold + amnt
-        oldest_prod_buy_ID = '1'
-        temp_amount = amnt
-        row_diff = 0
-        new_last_used_ID = 0
-        for row in rowreader:
-            if row['Product'] == prod:
-                total_bought = total_bought + int(row['Amount'])
-                if temp_amount > int(row['Amount']):
-                    row_diff = temp_amount - int(row['Amount'])
-                    with open (sell_csv_file, 'a', newline='') as open_csv:
-                        writer = csv.writer(open_csv)
-                        new_row = [int(last_used_ID)+1, prod, sell_date, int(row['Amount']), price, oldest_prod_buy_ID]
-                        writer.writerow(new_row)
-                        new_last_used_ID = int(last_used_ID)+1
-                        temp_amount = row_diff
-                        continue
-                elif total_bought < total_required:
-                    #oldest_prod_buy_ID = int(oldest_prod_buy_ID)+1
-                    continue
-                elif total_bought >= total_required:
-                    oldest_prod_buy_ID = row['ID']
-                    break
-            else:
+    # Check availability and write to sold_csv
+    prod_available = False
+    #excess_amnt = int(0)
+    for key in get_inventory(buy_csv, sell_csv):
+        if prod == key['Product']:
+            if key['in_inv'] == 0:
                 continue
+            elif key['is_expired'] == 1:
+                continue
+            elif amnt > int(key['in_inv']):
+                with open (sell_csv_file, 'a', newline='') as open_csv:
+                    writer = csv.writer(open_csv)
+                    new_row = [int(last_used_ID)+1, prod, sell_date, int(key['in_inv']), price, key['ID']]
+                    writer.writerow(new_row)
+                    last_used_ID = int(last_used_ID)+1
+                    prod_available = True
+                    amnt = amnt - int(key['in_inv'])
+                continue
+            elif amnt <= int(key['in_inv']):
+                with open (sell_csv_file, 'a', newline='') as open_csv:
+                    writer = csv.writer(open_csv)
+                    new_row = [int(last_used_ID)+1, prod, sell_date, amnt, price, key['ID']]
+                    writer.writerow(new_row)
+                    prod_available = True
+                break            
+            else:
+                with open (sell_csv_file, 'a', newline='') as open_csv:
+                    writer = csv.writer(open_csv)
+                    new_row = [int(last_used_ID)+1, prod, sell_date, amnt, price, key['ID']]
+                    writer.writerow(new_row)
+                    prod_available = True
+                break
+        else:
+            continue
+    
+    if amnt != 0 or prod_available == False:  #amnt != 0 is quite redundant here
+        print(f'Not enough or expired {prod}s in inventory')
 
-    available_prod = total_bought - total_sold
-    if amnt <= available_prod:
-        # Add product as row to csv
-        with open (sell_csv_file, 'a', newline='') as open_csv:
-            writer = csv.writer(open_csv)
-            new_row = [int(new_last_used_ID)+1, prod, sell_date, temp_amount, price, oldest_prod_buy_ID]
-            writer.writerow(new_row)
-    else:
-        print(f'Not enough {prod} in inventory')
+def old_csv_riter_tries():
+    # ## FIX : If amnt > row['Amount] only the latest oldest_prod_buy_ID is given !!!
+    # with open(sell_csv, newline='') as sell_check:
+    #     rowreader = csv.DictReader(sell_check)
+    #     total_sold = 0
+    #     for row in rowreader:
+    #         if row['Product'] == prod:
+    #             total_sold = total_sold + int(row['Amount'])
+    # with open(buy_csv, newline='') as buy_check:
+    #     rowreader = csv.DictReader(buy_check)
+    #     total_bought = 0
+    #     total_required = total_sold + amnt
+    #     oldest_prod_buy_ID = '1'
+    #     temp_amount = amnt
+    #     row_diff = 0
+    #     new_last_used_ID = 0
+    #     for row in rowreader:
+    #         if row['Product'] == prod:
+    #             total_bought = total_bought + int(row['Amount'])
+    #             if temp_amount > int(row['Amount']):
+    #                 row_diff = temp_amount - int(row['Amount'])
+    #                 with open (sell_csv_file, 'a', newline='') as open_csv:
+    #                     writer = csv.writer(open_csv)
+    #                     new_row = [int(last_used_ID)+1, prod, sell_date, int(row['Amount']), price, oldest_prod_buy_ID]
+    #                     writer.writerow(new_row)
+    #                     new_last_used_ID = int(last_used_ID)+1
+    #                     temp_amount = row_diff
+    #                     continue
+    #             elif total_bought < total_required:
+    #                 #oldest_prod_buy_ID = int(oldest_prod_buy_ID)+1
+    #                 continue
+    #             elif total_bought >= total_required:
+    #                 oldest_prod_buy_ID = row['ID']
+    #                 break
+    #         else:
+    #             continue
 
-#csv = sell_csv_writer(sell_csv, 'banana', stoday, 3 , 12)
+    # available_prod = total_bought - total_sold
+    # if amnt <= available_prod:
+    #     # Add product as row to csv
+    #     with open (sell_csv_file, 'a', newline='') as open_csv:
+    #         writer = csv.writer(open_csv)
+    #         new_row = [int(new_last_used_ID)+1, prod, sell_date, temp_amount, price, oldest_prod_buy_ID]
+    #         writer.writerow(new_row)
+    # else:
+    #     print(f'Not enough {prod} in inventory')
+    pass
+
+csv = sell_csv_writer(sell_csv, 'banana', stoday, 3 , 12)
 #csv = buy_csv_writer(buy_csv, 'banana', stoday, 2 , 12, stoday)
 #print(get_inventory(buy_csv, sell_csv))
 
