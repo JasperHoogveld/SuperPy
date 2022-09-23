@@ -144,13 +144,45 @@ def get_revenue(spec_date):
         sell_price = key['Sell_Price']
         sell_date = key['Sell_Date'][:timespan:]
         if spec_date == sell_date:
-            total_revenue = total_revenue + int(sell_price)
+            total_revenue = total_revenue + float(sell_price)
 
     return (f'The total revenue for {spec_date} is {total_revenue} euros')
 
 
-def get_profit():
-    pass
+def get_profit(spec_date):
+    # Add all sold and bought items from csv to lists with dicts
+    sold_list = []
+    bought_list = []
+    with open(sell_csv, 'r', newline='') as open_csv:
+        in_file = csv.DictReader(open_csv)
+        for row in in_file:
+            sold_list.append(row)
+    
+    with open(buy_csv, 'r', newline='') as open_csv:
+        in_file = csv.DictReader(open_csv)
+        for row in in_file:
+            bought_list.append(row)
+
+    # Add total sold
+    timespan = len(spec_date)
+    total_sold = 0
+    for key in sold_list:
+        sell_price = key['Sell_Price']
+        sell_date = key['Sell_Date'][:timespan:]
+        if spec_date == sell_date:
+            total_sold = total_sold + int(sell_price) 
+
+    # Add total bought
+    total_bought = 0
+    for key in bought_list:
+        buy_price = key['Buy_Price']
+        buy_date = key['Buy_Date'][:timespan:]
+        if spec_date == buy_date:
+            total_bought = total_bought + int(buy_price)
+    
+    total_profit = float(total_sold) - float(total_bought)
+
+    return (f'The total profit for {spec_date} is {total_profit} euros')    
 
 # CSV Files locations
 buy_csv = os.path.join(sys.path[0], 'bought.csv')
@@ -243,7 +275,8 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
 #csv = buy_csv_writer(buy_csv, 'banana', stoday, 2 , 12, stoday)
 #print(get_inventory(buy_csv, sell_csv))
 #print(advance_time(current_date, 2))
-#print(revenue('2022-09-22'))
+#print(get_revenue('2022-09-22'))
+print(get_profit('2022'))
 
 if __name__ == "__main__":
     main()
