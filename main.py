@@ -128,41 +128,6 @@ def get_inventory(buy_csv, sell_csv):
 
     return bought_list
 
-## Build in a totals system to counter selling the last stack when sell_amnt is greater ???
-
-def totals_system():
-    # Calculate total sold per item and add to sold_totals dict
-    sold_totals = dict()
-    bought_totals = dict()
-    total_amnt = 0
-    for item in sold_list:
-        prod = item['Product']
-        amnt = item['Amount']
-        if len(sold_totals) == 0:
-            sold_totals[prod] = int(amnt)
-        elif prod not in sold_totals:
-            sold_totals[prod] = int(amnt)
-        else:
-            total_amnt = int(amnt) + int(sold_totals[prod])
-            sold_totals[prod] = total_amnt
-
-    # Calculate total bought per item and add to bought_totals dict
-    for item in bought_list:
-        prod = item['Product']
-        amnt = item['Amount']
-        if len(bought_totals) == 0:
-            bought_totals[prod] = int(amnt)
-        elif prod not in bought_totals:
-            bought_totals[prod] = int(amnt)
-        else:
-            total_amnt = int(amnt) + int(bought_totals[prod])
-            bought_totals[prod] = total_amnt
-
-    # Subtract bought_total and sold_total
-    inv_totals = dict()
-    for key in bought_totals:
-        inv_totals[key] = bought_totals[key] - sold_totals.get(key, 0)
-    pass
 
 def get_revenue(spec_date):
     # Add all sales to a list
@@ -182,6 +147,7 @@ def get_revenue(spec_date):
             total_revenue = total_revenue + int(sell_price)
 
     return (f'The total revenue for {spec_date} is {total_revenue} euros')
+
 
 def get_profit():
     pass
