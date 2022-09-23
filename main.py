@@ -4,7 +4,7 @@ from genericpath import exists
 import sys
 import argparse
 import csv
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 import os.path
 import shutil
@@ -41,9 +41,10 @@ def main():
     sell_parser.add_argument("-price", help="used with buy|sell options", type=int, nargs='?')
 
     report_parser = subparsers.add_parser('report', help='Produce a report')
-    report_parser.add_argument("-inventory", help="show inventory (used with report option)", nargs='?')
-    report_parser.add_argument("-revenue", help="report revenue (used with report option)", nargs='?')
-    report_parser.add_argument("-profit", help="report profit (used with report option)", nargs='?')
+    report_parser.add_argument("-mode", choices=['inventory', 'revenue', 'profit'])
+    # report_parser.add_argument("-inventory", help="show inventory (used with report option)", nargs='?')
+    # report_parser.add_argument("-revenue", help="report revenue (used with report option)", nargs='?')
+    # report_parser.add_argument("-profit", help="report profit (used with report option)", nargs='?')
 
     args = parser.parse_args()
 
@@ -54,20 +55,34 @@ def main():
         sell_csv_writer(sell_csv, args.prod, stoday, args.amount, args.price)
 
     if args.command == 'report':
-        if args.inventory:
+        if args.mode == 'inventory':
             get_inventory(buy_csv, sell_csv)
-        elif args.revenue:
-            pass
-        # etc etc
+        elif args.mode == 'revenue':
+            get_revenue(args.spec_date)
+        elif args.mode == 'profit':
+            get_profit(args.spec_date)      
 
-    if args.command == 'date':
-        pass
 
 class Product():
     def __init__(self, prod_name, price, exp_date):
         self.name = prod_name
         self.price = price
         self.exp_date = exp_date
+
+
+def advance_time(adv_time):
+    # Create txt file with current dat in YYYY-MM-DD
+    current_date = os.path.join(sys.path[0], 'date.txt')
+    if not os.path.exists(current_date):
+        file = Path(current_date)
+        file.touch()
+    with open(current_date, 'w') as file:
+        file.write(stoday)
+
+    # Return a date with the requested delta
+    req_time = datetime.strftime(today + timedelta(days=adv_time), '%Y-%m-%d')
+    return req_time
+
 
 def get_inventory(buy_csv, sell_csv):
     bought_list = []
@@ -111,7 +126,6 @@ def get_inventory(buy_csv, sell_csv):
             else:
                 continue
 
-    #pprint.pprint(bought_list)
     return bought_list
 
 ## Build in a totals system to counter selling the last stack when sell_amnt is greater ???
@@ -150,7 +164,29 @@ def totals_system():
         inv_totals[key] = bought_totals[key] - sold_totals.get(key, 0)
     pass
 
-# Buy and Sell csv file locations in current path
+def get_revenue(spec_date):
+    # Add all sales to a list
+    sold_list = []
+    with open(sell_csv, 'r', newline='') as open_csv:
+        in_file = csv.DictReader(open_csv)
+        for row in in_file:
+            sold_list.append(row)
+
+    # Check if Day, Month or Year and add totals of sales prices for that period per sold item
+    timespan = len(spec_date)
+    for key in sold_list:
+        total_revenue = 0
+        sell_price = key['Sell_Price']
+        sell_date = key['Sell_Date'][:timespan:]
+        if spec_date == sell_date:
+            total_revenue = total_revenue + int(sell_price)
+
+    return (f'The total revenue for {spec_date} is {total_revenue} euros')
+
+def get_profit():
+    pass
+
+# CSV Files locations
 buy_csv = os.path.join(sys.path[0], 'bought.csv')
 sell_csv = os.path.join(sys.path[0], 'sold.csv')
 
@@ -200,7 +236,6 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
 
     # Check availability from get_inventory() and write to sold_csv
     prod_available = False
-
     for key in get_inventory(buy_csv, sell_csv):
         if prod == key['Product']:
             if key['in_inv'] == 0:
@@ -235,13 +270,14 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
 
     # 'amnt != 0' is quite redundant here
     if amnt != 0 or prod_available == False:
-        print(f'Not enough or expired {prod}s in inventory')
+        print(f'There were {amnt} {prod}s too few in inventory')
 
 
-csv = sell_csv_writer(sell_csv, 'banana', stoday, 3 , 12)
+#csv = sell_csv_writer(sell_csv, 'banana', stoday, 3 , 12)
 #csv = buy_csv_writer(buy_csv, 'banana', stoday, 2 , 12, stoday)
 #print(get_inventory(buy_csv, sell_csv))
-
+#print(advance_time(current_date, 2))
+#print(revenue('2022-09-22'))
 
 if __name__ == "__main__":
     main()
