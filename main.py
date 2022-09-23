@@ -10,7 +10,7 @@ import os.path
 import shutil
 from pathlib import Path
 import pprint
-import traceback
+from rich import print as rprint
 
 # Do not change these lines.
 __winc_id__ = "a2bc36ea784242e4989deb157d527ba0"
@@ -43,16 +43,17 @@ def main():
     report_parser = subparsers.add_parser('report', help='Produce a report')
     report_parser.add_argument("-mode", choices=['inventory', 'revenue', 'profit'])
 
-    date_parser = subparsers.add_parser('adv_date', help="type a number of days you want to check inventory in the future")
-    date_parser.add_argument('timedelta', help="type a number of days you want to check inventory in the future")
+    date_parser = subparsers.add_parser('adv_date', help="type a number of days you want to check inventory in the future or reset that date")
+    date_parser.add_argument('-mode', choices=['time_delta', 'reset'])
+    date_parser.add_argument('num_days', nargs=1, type=int)
 
     args = parser.parse_args()
 
     if args.command == 'buy':
-        buy_csv_writer(buy_csv, args.prod, stoday, args.amount, args.price, args.exp)
+        buy_csv_writer(buy_csv, args.prod, args.amount, args.price, args.exp)
 
     if args.command == 'sell':
-        sell_csv_writer(sell_csv, args.prod, stoday, args.amount, args.price)
+        sell_csv_writer(sell_csv, args.prod, args.amount, args.price)
 
     if args.command == 'report':
         if args.mode == 'inventory':
@@ -63,12 +64,17 @@ def main():
             get_profit(args.spec_date)  
 
     if args.command == 'adv_date':
-        advance_date(args.timedelta)
+        if args.mode == 'time_delta':
+            advance_date(args.num_days)
+        elif args.mode == 'reset':
+            reset_date()
 
 
 # Files locations
 buy_csv = os.path.join(sys.path[0], 'bought.csv')
+temp_buy_csv = os.path.join(sys.path[0], 'temp_bought.csv')
 sell_csv = os.path.join(sys.path[0], 'sold.csv')
+temp_sell_csv = os.path.join(sys.path[0], 'temp_sold.csv')
 advanced_date = os.path.join(sys.path[0], 'date.txt')
 
 class Product():
@@ -77,10 +83,11 @@ class Product():
         self.price = price
         self.exp_date = exp_date
 
-def advance_date(adv_delta):
+def advance_date(num_days):
     # Create txt file with advanced date in YYYY-MM-DD
     #adv_delta = int(adv_delta)
-    adv_date = datetime.strftime(today + timedelta(days=int(adv_delta)), '%Y-%m-%d')
+    print(type(num_days))
+    adv_date = datetime.strftime(today + timedelta(days=num_days), '%Y-%m-%d')
     #advanced_date = os.path.join(sys.path[0], 'date.txt')
     if not os.path.exists(advanced_date):
         file = Path(advanced_date)
@@ -91,6 +98,39 @@ def advance_date(adv_delta):
     # Return a date with the requested delta
     return print(f' Date for processing set to {adv_date}')
 
+def reset_date():
+    # Delete avanced date file
+    if exists(advanced_date):
+        os.remove(advanced_date)
+    
+    # Write only the rows on or before today to temp file
+    with open(buy_csv, 'r') as inp, open(temp_buy_csv, 'w', newline='') as outp:
+        rowreader = csv.DictReader(inp)
+        headerlist = ['ID', 'Product', 'Buy_Date', 'Amount', 'Buy_Price', 'Exp_Date']
+        writer = csv.DictWriter(outp, delimiter=',', fieldnames = headerlist)
+        writer.writeheader()
+        for row in rowreader:
+            buy_date = datetime.strptime(row['Buy_Date'], '%Y-%m-%d')
+            if buy_date <= today:
+                writer.writerow(row)
+    
+    # Write only the rows on or before today to temp file
+    with open(sell_csv, 'r') as inp, open(temp_sell_csv, 'w', newline='') as outp:
+        rowreader = csv.DictReader(inp)
+        headerlist = ['ID', 'Product', 'Sell_Date', 'Amount', 'Sell_Price', 'Bought_ID']
+        writer = csv.DictWriter(outp, delimiter=',', fieldnames = headerlist)
+        writer.writeheader()
+        for row in rowreader:
+            sell_date = datetime.strptime(row['Sell_Date'], '%Y-%m-%d')
+            if sell_date <= today:
+                writer.writerow(row)
+
+    # Copy temp files over originals and remove temp files
+    shutil.copyfile(temp_buy_csv, buy_csv)
+    shutil.copyfile(temp_sell_csv, sell_csv)
+    os.remove(temp_buy_csv)
+    os.remove(temp_sell_csv)
+    
 
 def get_inventory(buy_csv, sell_csv):
     bought_list = []
@@ -140,12 +180,10 @@ def get_inventory(buy_csv, sell_csv):
             else:
                 continue
     
-    # Delete avanced date file
-    if exists(advanced_date):
-        os.remove(advanced_date)
-           
-    return pprint.pprint(bought_list, sort_dicts=False)
+    return bought_list
 
+    #return pprint.pprint(bought_list, sort_dicts=False)
+    # Also gives back a None???
 
 def get_revenue(spec_date):
     # Add all sales to a list
@@ -202,7 +240,14 @@ buy_csv = os.path.join(sys.path[0], 'bought.csv')
 sell_csv = os.path.join(sys.path[0], 'sold.csv')
 
 # CSV Writer to write a product to bought.csv file
-def buy_csv_writer(buy_csv_file, prod, buy_date, amnt, price, exp):
+def buy_csv_writer(buy_csv_file, prod, amnt, price, exp):
+    # Read advanced date if set
+    if exists(advanced_date):
+        with open(advanced_date, 'r') as f:
+            adv_date = f.readline()
+    else:
+        adv_date = stoday
+
     ## If file doesn't exist, create it with the correct headers
     if not os.path.exists(buy_csv_file):
         file = Path(buy_csv_file)
@@ -223,11 +268,18 @@ def buy_csv_writer(buy_csv_file, prod, buy_date, amnt, price, exp):
     # Add product as row to csv
     with open (buy_csv_file, 'a', newline='') as open_csv:
         writer = csv.writer(open_csv)
-        new_row = [int(last_used_ID)+1, prod, buy_date, amnt, price, exp]
+        new_row = [int(last_used_ID)+1, prod, adv_date, amnt, price, exp]
         writer.writerow(new_row)
 
 # CSV Writer to write a product to sold.csv file
-def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
+def sell_csv_writer(sell_csv_file, prod, amnt, price):
+    # Read advanced date if set
+    if exists(advanced_date):
+        with open(advanced_date, 'r') as f:
+            adv_date = f.readline()
+    else:
+        adv_date = stoday
+
     # If file doesn't exist, create it with the correct headers
     if not os.path.exists(sell_csv_file):
         file = Path(sell_csv_file)
@@ -256,7 +308,7 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
             elif amnt > int(key['in_inv']):
                 with open (sell_csv_file, 'a', newline='') as open_csv:
                     writer = csv.writer(open_csv)
-                    new_row = [int(last_used_ID)+1, prod, sell_date, int(key['in_inv']), price, key['ID']]
+                    new_row = [int(last_used_ID)+1, prod, adv_date, int(key['in_inv']), price, key['ID']]
                     writer.writerow(new_row)
                     last_used_ID = int(last_used_ID)+1
                     prod_available = True
@@ -265,29 +317,30 @@ def sell_csv_writer(sell_csv_file, prod, sell_date, amnt, price):
             elif amnt <= int(key['in_inv']):
                 with open (sell_csv_file, 'a', newline='') as open_csv:
                     writer = csv.writer(open_csv)
-                    new_row = [int(last_used_ID)+1, prod, sell_date, amnt, price, key['ID']]
+                    new_row = [int(last_used_ID)+1, prod, adv_date, amnt, price, key['ID']]
                     writer.writerow(new_row)
                     prod_available = True
                 break
             else:
                 with open (sell_csv_file, 'a', newline='') as open_csv:
                     writer = csv.writer(open_csv)
-                    new_row = [int(last_used_ID)+1, prod, sell_date, amnt, price, key['ID']]
+                    new_row = [int(last_used_ID)+1, prod, adv_date, amnt, price, key['ID']]
                     writer.writerow(new_row)
                     prod_available = True
                 break
         else:
             continue
 
-    # 'amnt != 0' is quite redundant here
+    # Doesn't seemn to work 100% <--- CHECK
     if amnt != 0 or prod_available == False:
         print(f'There were {amnt} {prod}s too few in inventory')
 
 
-#csv = sell_csv_writer(sell_csv, 'banana', stoday, 3 , 12)
-#csv = buy_csv_writer(buy_csv, 'banana', stoday, 2 , 12, stoday)
+#csv = sell_csv_writer(sell_csv, 'banana', 3 , 14)
+#csv = buy_csv_writer(buy_csv, 'banana', 2 , 12, '2022-12-13')
 #print(get_inventory(buy_csv, sell_csv))
-#print(advance_date(60))
+print(advance_date(60))
+#print(reset_date())
 #print(get_revenue())
 #print(get_profit('2022'))
 
