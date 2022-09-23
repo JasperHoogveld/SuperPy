@@ -43,7 +43,8 @@ def main():
     report_parser = subparsers.add_parser('report', help='Produce a report')
     report_parser.add_argument("-mode", choices=['inventory', 'revenue', 'profit'])
 
-    parser.add_argument('adv_date', help="type a number of days you want to check inventory in the future")
+    date_parser = subparsers.add_parser('adv_date', help="type a number of days you want to check inventory in the future")
+    date_parser.add_argument('timedelta', help="type a number of days you want to check inventory in the future")
 
     args = parser.parse_args()
 
@@ -62,7 +63,7 @@ def main():
             get_profit(args.spec_date)  
 
     if args.command == 'adv_date':
-        advance_date(args.delta)
+        advance_date(args.timedelta)
 
 
 # Files locations
@@ -78,7 +79,8 @@ class Product():
 
 def advance_date(adv_delta):
     # Create txt file with advanced date in YYYY-MM-DD
-    adv_date = datetime.strftime(today + timedelta(days=adv_delta), '%Y-%m-%d')
+    #adv_delta = int(adv_delta)
+    adv_date = datetime.strftime(today + timedelta(days=int(adv_delta)), '%Y-%m-%d')
     #advanced_date = os.path.join(sys.path[0], 'date.txt')
     if not os.path.exists(advanced_date):
         file = Path(advanced_date)
@@ -87,7 +89,7 @@ def advance_date(adv_delta):
         file.write(adv_date)
 
     # Return a date with the requested delta
-    return (f' Date for processing set to {adv_date}')
+    return print(f' Date for processing set to {adv_date}')
 
 
 def get_inventory(buy_csv, sell_csv):
@@ -142,7 +144,7 @@ def get_inventory(buy_csv, sell_csv):
     if exists(advanced_date):
         os.remove(advanced_date)
            
-    return print(bought_list)
+    return pprint.pprint(bought_list, sort_dicts=False)
 
 
 def get_revenue(spec_date):
