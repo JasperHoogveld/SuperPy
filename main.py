@@ -339,7 +339,7 @@ def sell_csv_writer(sell_csv_file, prod, amnt, price):
 #csv = sell_csv_writer(sell_csv, 'banana', 3 , 14)
 #csv = buy_csv_writer(buy_csv, 'banana', 2 , 12, '2022-12-13')
 #print(get_inventory(buy_csv, sell_csv))
-print(advance_date(60))
+#print(advance_date(60))
 #print(reset_date())
 #print(get_revenue())
 #print(get_profit('2022'))
