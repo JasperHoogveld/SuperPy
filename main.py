@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from rich import print as rprint
 from rich.table import Table
 from rich.console import Console
-import json
+from tkinter import messagebox, simpledialog
 
 
 # Do not change these lines.
@@ -32,6 +32,9 @@ sell_csv = os.path.join(sys.path[0], 'sold.csv')
 temp_sell_csv = os.path.join(sys.path[0], 'temp_sold.csv')
 date_file = os.path.join(sys.path[0], 'date.txt')
 
+###########
+########### Stil need to fix get_profit and the arguments in report Revenue/profit ##
+###########
 
 def main():
     parser = argparse.ArgumentParser(prog="Inventory Manager",
@@ -46,15 +49,15 @@ def main():
     buy_parser.add_argument("-exp", help="Expiration date")
 
     sell_parser = subparsers.add_parser('sell', help='Add a sold product')
-    sell_parser.add_argument("-prod", help="enter a product to buy or sell", type=str)
+    sell_parser.add_argument("-prod", help="Enter a product to buy or sell", type=str)
     sell_parser.add_argument("-amount", help="Amount of items", type=int)
     sell_parser.add_argument("-price", help="Price per item", type=float)
 
-    report_parser = subparsers.add_parser('report', help='Produce a report')
+    report_parser = subparsers.add_parser('report', help='Report Inventory or Revenue/Profit over a time period')
     report_parser.add_argument('mode', choices=['inventory', 'revenue', 'profit'])
-    report_parser.add_argument('-spec_date')
+    report_parser.add_argument('-period', type=str)
 
-    date_parser = subparsers.add_parser('adv_date', help="type a number of days you want to check inventory in the future or reset that date")
+    date_parser = subparsers.add_parser('adv_date', help="Type a number of days you want to test in the future or reset to today")
     date_parser.add_argument('mode', choices=['time_delta', 'reset'])
     date_parser.add_argument('-num_days', type=int)
 
@@ -67,12 +70,12 @@ def main():
         sell_csv_writer(sell_csv, args.prod, args.amount, args.price)
 
     if args.command == 'report':
-        if args.mode == 'inventory':
-            display_inventory()
+        if args.mode == 'profit':
+            get_profit(args.period)  
         elif args.mode == 'revenue':
-            get_revenue(args.spec_date)
-        elif args.mode == 'profit':
-            get_profit(args.spec_date)  
+            get_revenue(args.period)
+        elif args.mode == 'inventory':
+            display_inventory()
 
     if args.command == 'adv_date':
         if args.mode == 'time_delta':
@@ -90,7 +93,6 @@ def get_date():
     else:
         with open(date_file, 'r') as f:
             set_date = f.readline()
-        #set_date = datetime.strptime(set_date, '%Y-%m-%d')
 
     return set_date
 
@@ -106,7 +108,7 @@ def advance_date(num_days):
         file.write(adv_date)
 
     # Return a date with the requested delta
-    rprint(f' Date for processing set to {adv_date}')
+    print(messagebox.showinfo(None, f'Date for processing set to {adv_date}'))
 
 def reset_date():
     # Delete avanced date file
@@ -211,7 +213,7 @@ def display_inventory():
     print('')
     console.print(inv_table)
 
-def get_revenue(spec_date):
+def get_revenue(period):
     # Add all sales to a list
     sold_list = []
     with open(sell_csv, 'r', newline='') as open_csv:
@@ -224,12 +226,12 @@ def get_revenue(spec_date):
     for item in sold_list:
         sell_price = float(item['Sell_Price'])
         sell_quant = float(item['Amount'])
-        if item['Sell_Date'].startswith(str(spec_date)):
+        if item['Sell_Date'].startswith(str(period)):
             total_revenue = total_revenue + (sell_price*sell_quant)
 
-    return rprint(f'The total revenue for {spec_date} is {total_revenue} euros')
+    print(messagebox.showinfo(None, f'The total revenue for {period} is {total_revenue} euros'))
 
-def get_profit(spec_date):
+def get_profit(period):
 #### Change to check BoughtIDs
 
     # Add all sold and bought items from csv to lists with dicts
@@ -246,32 +248,42 @@ def get_profit(spec_date):
             bought_list.append(row)
 
     # Add sold items for that period into new list
-    #total_sold = 0
     new_sold_list = []
     for item in sold_list:
-        #sell_price = item['Sell_Price']
-        if item['Sell_Date'].startswith(str(spec_date)):
+        if item['Sell_Date'].startswith(str(period)):
             new_key = dict()
             new_key['Product'] = item['Product']
-            sold_price_total = int(item['Sell_Price']) * int(item['Amount'])
-            #new_key['Bought_ID'] = item['Bought_ID']
+            sold_price_total = float(item['Sell_Price']) * float(item['Amount'])
             for item2 in bought_list:
                 if item2['ID'] == item['Bought_ID']:
-                    bought_price_total = int(item2['Amount']) * int(item2['Buy_Price'])
+                    bought_price_total = float(item['Amount']) * float(item2['Buy_Price'])
                     new_key['Profit'] = sold_price_total - bought_price_total
-                    new_sold_list.append(new_key)        
-
-    # Add total bought for that period
-    # total_bought = 0
-    # for item in bought_list:
-    #     buy_price = item['Buy_Price']
-    #     if item['Buy_Date'].startswith(str(spec_date)):
-    #         total_bought = total_bought + int(buy_price)
+                    new_sold_list.append(new_key)
+                    break    
     
-    #total_profit = float(total_sold) - float(total_bought)
-    #return print(f'The total profit for {spec_date} is {total_profit} euros')    
+    # Calculate profits and add to profit_list
+    profit_list = []
+    for new_product in new_sold_list:
+        product_is_known = False
+        for product in profit_list:
+            if new_product["Product"] == product["Product"]:
+                product_is_known = True
+                product["Profit"] += new_product["Profit"]
+        if not product_is_known:
+            profit_list.append(new_product)
+        product_is_known = False
+    
+    # Create a table with columns
+    prof_table = Table(title="Profit")
+    prof_table.add_column("Product", no_wrap=True, style="green")
+    prof_table.add_column("Profit", no_wrap=True, style="yellow")
 
-    rprint(new_sold_list)
+    # Print the table
+    for item in profit_list:
+        prof_table.add_row(item['Product'], str(item['Profit']))
+    console = Console()
+    print(f'Period: {period}')
+    console.print(prof_table)                    
 
 def buy_csv_writer(buy_csv_file, prod, amnt, price, exp):
     ## CSV Writer to write a product to bought.csv file
@@ -370,7 +382,7 @@ def sell_csv_writer(sell_csv_file, prod, amnt, price):
 #print(advance_date(60))
 #print(reset_date())
 #print(get_revenue(2022))
-##print(get_profit('2022'))
+#print(get_profit('2022'))
 
 if __name__ == "__main__":
     main()
