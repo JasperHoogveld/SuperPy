@@ -1,11 +1,9 @@
 # Imports
-#from asyncio.proactor_events import _ProactorBasePipeTransport
 from genericpath import exists
 import sys
 import argparse
 import csv
-from datetime import date, datetime, timedelta
-#from typing import Optional
+from datetime import datetime, timedelta
 import os.path
 import shutil
 from pathlib import Path
@@ -34,7 +32,8 @@ date_file = os.path.join(sys.path[0], 'date.txt')
 
 def main():
     parser = argparse.ArgumentParser(prog="Inventory Manager",
-                                    description="Program to manage and report store Inventory")
+                                    description="Program to manage and report Store Inventory. \
+                                    Use -h together with buy, sell, report or adv_date for more options")
     subparsers = parser.add_subparsers(dest='command')
 
     buy_parser = subparsers.add_parser('buy', help='Add a bought product')
@@ -50,12 +49,12 @@ def main():
 
     report_parser = subparsers.add_parser('report', help='Report Inventory or Revenue/Profit over a time period')
     report_parser.add_argument('mode', choices=['inventory', 'revenue', 'profit'])
-    report_parser.add_argument('-period', type=str)
+    report_parser.add_argument('-period', help="Enter a period for 'report revenue' or 'report profit'", type=str)
 
     date_parser = subparsers.add_parser('adv_date', 
-                    help="Type a number of days you want to test in the future or reset to today")
+                    help="Type a number of days you want to test in the future or reset back to today")
     date_parser.add_argument('mode', choices=['time_delta', 'reset'])
-    date_parser.add_argument('-num_days', type=int)
+    date_parser.add_argument('-num_days', help="Use with 'adv_date time_delta' to advance time", type=int)
 
     args = parser.parse_args()
 
@@ -67,11 +66,7 @@ def main():
 
     if args.command == 'report':
         if args.mode == 'profit':
-            try:
-                if args.period != None:
-                    get_profit(args.period)  
-            except ValueError:
-                print('A period value must be entered')
+            get_profit(args.period)  
         elif args.mode == 'revenue':
             get_revenue(args.period)
         elif args.mode == 'inventory':
@@ -375,16 +370,6 @@ def sell_csv_writer(sell_csv_file, prod, amnt, price):
 
     if amnt != 0 or prod_available == False:
         print(f'There were {amnt} {prod}s too few in inventory')
-
-
-#csv = sell_csv_writer(sell_csv, 'banana', 10 , 3.25)
-#csv = buy_csv_writer(buy_csv, 'banana', 2 , 12, '2022-12-13')
-#print(get_inventory(buy_csv, sell_csv))
-#print(display_inventory())
-#print(advance_date(60))
-#print(reset_date())
-#print(get_revenue(2022))
-#print(get_profit('2022'))
 
 if __name__ == "__main__":
     main()
