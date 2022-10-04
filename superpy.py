@@ -93,16 +93,14 @@ def get_date():
 
 def advance_date(num_days):
     # Create txt file with advanced date in YYYY-MM-DD
-    #adv_delta = int(adv_delta)
     adv_date = datetime.strftime(today + timedelta(days=int(num_days)), '%Y-%m-%d')
-    #advanced_date = os.path.join(sys.path[0], 'date.txt')
     if not os.path.exists(date_file):
         file = Path(date_file)
         file.touch()
     with open(date_file, 'w') as file:
         file.write(adv_date)
 
-    # Return a date with the requested delta
+    # Print a date with the requested delta
     print(messagebox.showinfo(None, f'Date for processing set to {adv_date}'))
 
 def reset_date():
