@@ -22,40 +22,66 @@ __human_name__ = "superpy"
 today = datetime.now()
 stoday = today.strftime("%Y-%m-%d")
 
-# Files locations
+## Files locations
 buy_csv = os.path.join(sys.path[0], 'bought.csv')
-temp_buy_csv = os.path.join(sys.path[0], 'temp_bought.csv')
+# If buy_csv file doesn't exist, create it with the correct headers
+if not os.path.exists(buy_csv):
+    file = Path(buy_csv)
+    file.touch()
+    # Write header
+    headerlist = ['ID', 'Product', 'Buy_Date', 'Amount', 'Buy_Price', 'Exp_Date']
+    with open(buy_csv, 'w', newline='') as open_csv:
+        head = csv.DictWriter(open_csv, delimiter=',', fieldnames = headerlist)
+        head.writeheader()
+
 sell_csv = os.path.join(sys.path[0], 'sold.csv')
+# If sell_csv file doesn't exist, create it with the correct headers
+if not os.path.exists(sell_csv):
+    file = Path(sell_csv)
+    file.touch()
+    # Write header to csv file
+    headerlist = ['ID', 'Product', 'Sell_Date', 'Amount', 'Sell_Price', 'Bought_ID']
+    with open(sell_csv, 'w', newline='') as open_csv:
+        head = csv.DictWriter(open_csv, delimiter=',', fieldnames = headerlist)
+        head.writeheader()
+
+temp_buy_csv = os.path.join(sys.path[0], 'temp_bought.csv')
 temp_sell_csv = os.path.join(sys.path[0], 'temp_sold.csv')
 date_file = os.path.join(sys.path[0], 'date.txt')
 
 
 def main():
+    # Add a parser for commandline input
     parser = argparse.ArgumentParser(prog="Inventory Manager",
                                     description="Program to manage and report Store Inventory. \
                                     Use -h together with buy, sell, report or adv_date for more options")
     subparsers = parser.add_subparsers(dest='command')
 
+    # Create a Buy Sub-parser
     buy_parser = subparsers.add_parser('buy', help='Add a bought product')
     buy_parser.add_argument("-prod", required=True, help="Enter a product to buy or sell", type=str)
     buy_parser.add_argument("-amount", required=True, help="Amount of items", type=int)
     buy_parser.add_argument("-price", required=True, help="Price per item", type=float)
     buy_parser.add_argument("-exp", required=True, help="Expiration date")
 
+    # Create a Sell Sub-parser
     sell_parser = subparsers.add_parser('sell', help='Add a sold product')
     sell_parser.add_argument("-prod", required=True, help="Enter a product to buy or sell", type=str)
     sell_parser.add_argument("-amount", required=True, help="Amount of items", type=int)
     sell_parser.add_argument("-price", required=True, help="Price per item", type=float)
 
+    # Create a Report Sub-parser
     report_parser = subparsers.add_parser('report', help='Report Inventory or Revenue/Profit over a time period')
     report_parser.add_argument('mode', choices=['inventory', 'revenue', 'profit'])
     report_parser.add_argument('-period', help="Enter a period for 'report revenue' or 'report profit'", type=str)
 
+    # Create an Advance Date Sub-parser
     date_parser = subparsers.add_parser('adv_date', 
                     help="Type a number of days you want to test in the future or reset back to today")
     date_parser.add_argument('mode', choices=['time_delta', 'reset'])
     date_parser.add_argument('-num_days', help="Use with 'adv_date time_delta' to advance time", type=int)
 
+    # Create an Argument parser with if loops to check the input
     args = parser.parse_args()
 
     if args.command == 'buy':
@@ -79,12 +105,14 @@ def main():
             reset_date()
 
 def get_date():
+    # Create a date.txt file if it doesn't exist and write today's date into it
     if not os.path.exists(date_file):
         file = Path(date_file)
         file.touch()
         with open(date_file, 'w') as file:
             file.write(stoday) 
         set_date = stoday  
+    # Or read the advanced date that was set with the advance_date() function
     else:
         with open(date_file, 'r') as f:
             set_date = f.readline()
@@ -285,16 +313,6 @@ def buy_csv_writer(buy_csv_file, prod, amnt, price, exp):
     # Read advanced date if set
     set_date = get_date()
 
-    # If file doesn't exist, create it with the correct headers
-    if not os.path.exists(buy_csv_file):
-        file = Path(buy_csv_file)
-        file.touch()
-        # Write header
-        headerlist = ['ID', 'Product', 'Buy_Date', 'Amount', 'Buy_Price', 'Exp_Date']
-        with open(buy_csv_file, 'w', newline='') as open_csv:
-            head = csv.DictWriter(open_csv, delimiter=',', fieldnames = headerlist)
-            head.writeheader()
-
     # Check last used ID
     with open(buy_csv_file, newline='') as open_csv:
         rowreader = csv.DictReader(open_csv)
@@ -312,16 +330,6 @@ def sell_csv_writer(sell_csv_file, prod, amnt, price):
     ## CSV Writer to write a product to sold.csv file
     # Read advanced date if set
     set_date = get_date()
-
-    # If file doesn't exist, create it with the correct headers
-    if not os.path.exists(sell_csv_file):
-        file = Path(sell_csv_file)
-        file.touch()
-        # Write header to csv file
-        headerlist = ['ID', 'Product', 'Sell_Date', 'Amount', 'Sell_Price', 'Bought_ID']
-        with open(sell_csv_file, 'w', newline='') as open_csv:
-            head = csv.DictWriter(open_csv, delimiter=',', fieldnames = headerlist)
-            head.writeheader()
 
     # Check last used ID
     with open(sell_csv_file, newline='') as open_csv:
